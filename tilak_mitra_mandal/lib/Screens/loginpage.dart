@@ -82,7 +82,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           await prefs.setString('user_email', response['user']['email'] ?? '');
           await prefs.setString('user_name', response['user']['name'] ?? '');
           await prefs.setString('user_role', response['user']['role'] ?? '');
-      
         }
 
         setState(() {
@@ -98,15 +97,11 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             ),
           );
           final role = prefs.getString('user_role') ?? 'No role saved';
-            print('User Role: $role');
-
-        
+          print('User Role: $role');
 
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (_) => HomeScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => HomeScreen()),
           );
         }
       } catch (e) {
@@ -226,18 +221,20 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                   opacity: 0.9,
                                   child: Image.asset(
                                     'lib/assets/tilak.png',
+                                    height: 800,
+                                    width: 800,
                                     fit: BoxFit.cover,
                                   ),
                                 ),
                               ),
                             ),
                             const SizedBox(height: 24),
-                            const Text(
-                              'Tilak Mitra Mandal',
+                            Text(
+                              'तिलक मित्र मंडल',
                               style: TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF2E2E2E),
+                                color: Colors.red.shade300,
                               ),
                             ),
                             const SizedBox(height: 8),

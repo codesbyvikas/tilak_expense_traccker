@@ -17,6 +17,21 @@ class ExpenseApi {
     }
   }
 
+  /// Fetch total expenses amount
+  static Future<Map<String, dynamic>> getTotalExpenses(String token) async {
+    try {
+      final res = await ApiClient.dio.get(
+        '/expenses/total',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return res.data;
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data['error'] ?? 'Failed to fetch total expenses',
+      );
+    }
+  }
+
   /// Add a new expense
   static Future<Map<String, dynamic>> addExpense({
     required String token,

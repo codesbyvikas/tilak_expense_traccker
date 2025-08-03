@@ -22,10 +22,12 @@ class CollectionApi {
   // Fetch total collections amount
   static Future<Map<String, dynamic>> getTotalCollections(String token) async {
     try {
+      print("total loading");
       final res = await ApiClient.dio.get(
         '/collections/total',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
+      print(res.data);
       return res.data;
     } on DioException catch (e) {
       throw Exception(

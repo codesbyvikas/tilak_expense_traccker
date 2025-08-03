@@ -13,7 +13,6 @@ void main() async {
 class GanpatiTrackerApp extends StatelessWidget {
   const GanpatiTrackerApp({super.key});
 
-  // Check if user is logged in by checking token
   Future<bool> _isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
@@ -52,7 +51,6 @@ class GanpatiTrackerApp extends StatelessWidget {
             );
           }
 
-          // Navigate to HomePage if token exists, else LoginPage
           return snapshot.data == true ? const HomeScreen() : const LoginPage();
         },
       ),
