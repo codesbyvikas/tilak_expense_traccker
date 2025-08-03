@@ -19,6 +19,21 @@ class CollectionApi {
     }
   }
 
+  // Fetch total collections amount
+  static Future<Map<String, dynamic>> getTotalCollections(String token) async {
+    try {
+      final res = await ApiClient.dio.get(
+        '/collections/total',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return res.data;
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data['error'] ?? 'Failed to fetch total collections',
+      );
+    }
+  }
+
   // Add a new collection
   static Future<Map<String, dynamic>> addCollection({
     required String token,

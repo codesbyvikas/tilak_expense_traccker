@@ -3,6 +3,7 @@ const router = express.Router();
 const { auth, isAdmin } = require('../middlewares/auth');
 const {
   getExpenses,
+  getTotalExpenses, // NEW: Import the new function
   addExpense,
   deleteExpense,
   updateExpense,
@@ -40,6 +41,7 @@ const upload = multer({
 
 // Routes
 router.get('/', auth, getExpenses);
+router.get('/total', auth, getTotalExpenses); // NEW: Add this route
 router.post('/', auth, upload.single('receipt'), addExpense);
 router.put('/:id', auth, upload.single('receipt'), updateExpense);
 router.delete('/:id', auth, deleteExpense);

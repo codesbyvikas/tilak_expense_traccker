@@ -11,6 +11,32 @@ exports.getCollections = async (req, res) => {
   }
 };
 
+// NEW: Get total collections
+exports.getTotalCollections = async (req, res) => {
+  try {
+    const result = await Collection.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: '$amount' },
+          totalCount: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const total = result.length > 0 ? result[0].totalAmount : 0;
+    const count = result.length > 0 ? result[0].totalCount : 0;
+
+    res.json({
+      totalAmount: total,
+      totalCount: count
+    });
+  } catch (err) {
+    console.error('❌ Failed to get total collections:', err);
+    res.status(500).json({ error: 'Failed to get total collections' });
+  }
+};
+
 exports.addCollection = async (req, res) => {
   try {
     const { amount, collectedBy, collectedFrom, description } = req.body;

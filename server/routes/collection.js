@@ -3,6 +3,7 @@ const router = express.Router();
 const { auth, isAdmin } = require('../middlewares/auth');
 const {
   getCollections,
+  getTotalCollections, // NEW: Import the new function
   addCollection,
   deleteCollection,
 } = require('../controller/collection');
@@ -36,6 +37,7 @@ const upload = multer({
 
 // Routes
 router.get('/', auth, getCollections);
+router.get('/total', auth, getTotalCollections); // NEW: Add this route
 router.post('/', auth, isAdmin, upload.single('receipt'), addCollection);
 router.delete('/:id', auth, isAdmin, deleteCollection);
 

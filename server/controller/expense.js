@@ -11,6 +11,32 @@ exports.getExpenses = async (req, res) => {
   }
 };
 
+// NEW: Get total expenses
+exports.getTotalExpenses = async (req, res) => {
+  try {
+    const result = await Expense.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: '$amount' },
+          totalCount: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const total = result.length > 0 ? result[0].totalAmount : 0;
+    const count = result.length > 0 ? result[0].totalCount : 0;
+
+    res.json({
+      totalAmount: total,
+      totalCount: count
+    });
+  } catch (err) {
+    console.error('❌ Failed to get total expenses:', err);
+    res.status(500).json({ error: 'Failed to get total expenses' });
+  }
+};
+
 exports.addExpense = async (req, res) => {
   try {
     const { amount, description, purpose, spentBy } = req.body;
