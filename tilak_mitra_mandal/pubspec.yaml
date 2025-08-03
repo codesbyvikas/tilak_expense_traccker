@@ -7,10 +7,12 @@ environment:
   sdk: ^3.7.2
 
 dependencies:
+  dio: ^5.8.0+1
   flutter:
     sdk: flutter
   image_picker: ^1.1.2
   intl: ^0.20.2
+  mime: ^2.0.0
   path: ^1.9.1
   uuid: ^4.5.1
 
