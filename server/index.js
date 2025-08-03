@@ -2,40 +2,88 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const morgan = require('morgan');
+
+// Load environment variables
 dotenv.config();
 
+// Validate required env variables
+const requiredEnvVars = [
+  'MONGO_URI',
+  'JWT_SECRET',
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET'
+];
+
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    console.error(`Missing required environment variable: ${envVar}`);
+    process.exit(1);
+  }
+}
+
 const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Middlewares
 app.use(cors());
+app.use(morgan('dev'));
 app.use(express.json());
 
+// Health check (before routes)
+app.get('/', (req, res) => res.send('Tilak Mitra Mandal Expense Tracker API is running.'));
+
+// Import and use routes (wrapped in try-catch to catch route definition errors)
+try {
+  const expenseRoutes = require('./routes/expense');
+  const collectionRoutes = require('./routes/collection');
+  const authRoutes = require('./routes/auth');
+
+  app.use('/api/expenses', expenseRoutes);
+  app.use('/api/collections', collectionRoutes);
+  app.use('/api/auth', authRoutes);
+
+  console.log('✅ All routes loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading routes:', error.message);
+  console.error('Stack:', error.stack);
+  process.exit(1);
+}
+
+// Handle unknown routes
+// app.use('*', (req, res) => {
+//   res.status(404).json({ message: 'Route not found' });
+// });
+
+// Error handling middleware
+app.use((error, req, res, next) => {
+  console.error('Error:', error);
+
+  if (error.name === 'ValidationError') {
+    return res.status(400).json({
+      message: 'Validation Error',
+      errors: Object.values(error.errors).map(err => err.message),
+    });
+  }
+
+  if (error.name === 'CastError') {
+    return res.status(400).json({ message: 'Invalid ID format' });
+  }
+
+  res.status(500).json({
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong',
+  });
+});
+
+// Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error(err));
-
-  const User = require('./models/User');
-
-const seedUsers = async () => {
-  const existing = await User.find();
-  if (existing.length) return;
-
-  await User.insertMany([
-    { name: 'Admin', email: 'admin@tilak.com', password: 'Reetesh@2025', role: 'admin' },
-    { name: 'Member1', email: 'm1@tilak.com', password: 'member2025', role: 'member' },
-    { name: 'Member2', email: 'm2@tilak.com', password: 'member2025', role: 'member' },
-    { name: 'Member3', email: 'm3@tilak.com', password: 'member2025', role: 'member' },
-    { name: 'Member4', email: 'm4@tilak.com', password: 'member2025', role: 'member' },
-  ]);
-
-  console.log('Users seeded');
-};
-
-seedUsers();
-
-
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/collections', require('./routes/collection'));
-app.use('/api/expenses', require('./routes/expense'));
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+.then(() => {
+  console.log('✅ MongoDB connected');
+  app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+})
+.catch(err => {
+  console.error('❌ MongoDB connection error:', err);
+  process.exit(1);
+});
