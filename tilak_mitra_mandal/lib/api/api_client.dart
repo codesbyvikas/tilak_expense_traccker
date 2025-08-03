@@ -4,12 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiClient {
   static final Dio dio = Dio(
     BaseOptions(
-      baseUrl: 'https://tilak-expense-tracker.onrender.com/api',
+      // baseUrl: 'https://tilak-expense-tracker.onrender.com/api',
+      baseUrl: 'https://xx9wq2sg-5000.inc1.devtunnels.ms/api',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: {'Content-Type': 'application/json'},
     ),
   );
 

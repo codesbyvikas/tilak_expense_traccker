@@ -13,11 +13,11 @@ exports.getCollections = async (req, res) => {
 
 exports.addCollection = async (req, res) => {
   try {
-    const { amount, collectedBy, description } = req.body;
+    const { amount, collectedBy, collectedFrom, description } = req.body;
     const file = req.file;
 
-    if (!amount || !collectedBy) {
-      return res.status(400).json({ error: 'Amount and collectedBy are required fields' });
+    if (!amount || !collectedBy || !collectedFrom) {
+      return res.status(400).json({ error: 'Amount, collectedBy, and collectedFrom are required' });
     }
 
     const parsedAmount = parseFloat(amount);
@@ -26,18 +26,13 @@ exports.addCollection = async (req, res) => {
     }
 
     const receiptUrl = file?.path || null;
-    if (receiptUrl) {
-      console.log('✅ Receipt uploaded:', receiptUrl);
-    } else {
-      console.log('⚠️ No receipt uploaded');
-    }
 
     const newCollection = new Collection({
       amount: parsedAmount,
       collectedBy,
+      collectedFrom,
       description: description || '',
       receiptUrl,
-      date: new Date() // fallback if not auto-set
     });
 
     const saved = await newCollection.save();
@@ -57,14 +52,15 @@ exports.deleteCollection = async (req, res) => {
       return res.status(404).json({ error: 'Collection not found' });
     }
 
-    // Delete receipt from Cloudinary
+    // Optional: Delete image from Cloudinary
     if (collection.receiptUrl) {
       try {
-        const publicId = collection.receiptUrl.split('/').slice(-2).join('/').split('.')[0];
-        await cloudinary.uploader.destroy(publicId);
-        console.log('✅ Deleted from Cloudinary:', publicId);
+        const parts = collection.receiptUrl.split('/');
+        const folderAndPublicId = parts.slice(-2).join('/').split('.')[0];
+        await cloudinary.uploader.destroy(folderAndPublicId);
+        console.log('✅ Cloudinary file deleted:', folderAndPublicId);
       } catch (err) {
-        console.warn('⚠️ Failed to delete from Cloudinary:', err.message);
+        console.warn('⚠️ Cloudinary delete error:', err.message);
       }
     }
 

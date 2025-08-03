@@ -29,6 +29,13 @@ class CollectionApi {
     File? receipt,
   }) async {
     try {
+      // Debug: Print the values being sent
+      print('Sending data:');
+      print('Amount: $amount');
+      print('Collected By: $collectedBy');
+      print('Collected From: $collectedFrom');
+      print('Description: $description');
+
       Map<String, dynamic> formDataMap = {
         'amount': amount.toString(),
         'collectedBy': collectedBy,
@@ -45,7 +52,7 @@ class CollectionApi {
         // Get file extension and determine content type
         final extension = receipt.path.toLowerCase().split('.').last;
         MediaType contentType = MediaType('image', 'jpeg'); // default
-        
+
         switch (extension) {
           case 'png':
             contentType = MediaType('image', 'png');
@@ -77,6 +84,12 @@ class CollectionApi {
 
       final formData = FormData.fromMap(formDataMap);
 
+      // Debug: Print form data fields
+      print('Form data fields:');
+      for (var field in formData.fields) {
+        print('${field.key}: ${field.value}');
+      }
+
       final res = await ApiClient.dio.post(
         '/collections',
         data: formData,
@@ -88,32 +101,41 @@ class CollectionApi {
         ),
       );
 
+      // Debug: Print response
+      print('Response: ${res.data}');
+
       return res.data;
     } on DioException catch (e) {
       // Enhanced error handling
       String errorMessage = 'Add collection failed';
-      
+
       if (e.response != null) {
         final responseData = e.response!.data;
+        print('Error response: $responseData'); // Debug print
+
         if (responseData is Map<String, dynamic>) {
-          errorMessage = responseData['message'] ?? 
-                        responseData['error'] ?? 
-                        'Server returned ${e.response!.statusCode} error';
+          errorMessage =
+              responseData['message'] ??
+              responseData['error'] ??
+              'Server returned ${e.response!.statusCode} error';
         } else if (responseData is String) {
           errorMessage = responseData;
         } else {
           errorMessage = 'Server returned ${e.response!.statusCode} error';
         }
       } else if (e.type == DioExceptionType.connectionTimeout) {
-        errorMessage = 'Connection timeout. Please check your internet connection.';
+        errorMessage =
+            'Connection timeout. Please check your internet connection.';
       } else if (e.type == DioExceptionType.receiveTimeout) {
         errorMessage = 'Server is taking too long to respond.';
       } else if (e.type == DioExceptionType.connectionError) {
-        errorMessage = 'Unable to connect to server. Please check your internet connection.';
+        errorMessage =
+            'Unable to connect to server. Please check your internet connection.';
       }
-      
+
       throw Exception(errorMessage);
     } catch (e) {
+      print('Unexpected error: $e'); // Debug print
       throw Exception('Unexpected error: ${e.toString()}');
     }
   }
