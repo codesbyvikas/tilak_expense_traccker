@@ -1,0 +1,51 @@
+# ========================================
+# Global ignores
+# ========================================
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+*.swo
+*.bak
+
+# IDE/editor/project configs
+.vscode/
+.idea/
+*.iml
+
+# ========================================
+# Backend: server/
+# ========================================
+server/node_modules/
+server/.env
+server/.env.*
+server/dist/
+server/build/
+server/coverage/
+server/logs/
+server/npm-debug.log*
+server/yarn-debug.log*
+server/yarn-error.log*
+server/package-lock.json
+server/uploads/
+server/temp/
+server/*.log
+
+# ========================================
+# Flutter App: tilak_mitra_mandal/
+# ========================================
+tilak_mitra_mandal/.dart_tool/
+tilak_mitra_mandal/.flutter-plugins
+tilak_mitra_mandal/.flutter-plugins-dependencies
+tilak_mitra_mandal/.packages
+tilak_mitra_mandal/build/
+tilak_mitra_mandal/.pub-cache/
+tilak_mitra_mandal/pubspec.lock
+
+# Android-specific inside Flutter app
+tilak_mitra_mandal/android/.gradle/
+tilak_mitra_mandal/android/app/build/
+tilak_mitra_mandal/android/local.properties
+tilak_mitra_mandal/android/.idea/
+tilak_mitra_mandal/android/*.iml
