@@ -1,4 +1,4 @@
-const Collection = require('../models/Collection');
+const Collection = require('../models/collection');
 const cloudinary = require('../utils/cloudinary');
 
 exports.getCollections = async (req, res) => {

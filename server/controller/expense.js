@@ -1,4 +1,4 @@
-const Expense = require('../models/Expense');
+const Expense = require('../models/expense');
 const cloudinary = require('../utils/cloudinary');
 
 exports.getExpenses = async (req, res) => {
