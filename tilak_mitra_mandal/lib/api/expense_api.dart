@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:tilak_mitra_mandal/api/api_client.dart';
 
 class ExpenseApi {
@@ -12,9 +13,7 @@ class ExpenseApi {
       );
       return res.data;
     } on DioException catch (e) {
-      throw Exception(
-        e.response?.data['error'] ?? 'Failed to fetch expenses',
-      );
+      throw Exception(e.response?.data['error'] ?? 'Failed to fetch expenses');
     }
   }
 
@@ -22,20 +21,68 @@ class ExpenseApi {
   static Future<Map<String, dynamic>> addExpense({
     required String token,
     required double amount,
-    required String description,  // Made required to match backend
-    required String purpose,      // Made required to match backend
-    required String spentBy,      // Made required to match backend
+    required String description,
+    required String purpose,
+    required String spentBy,
     File? receipt,
   }) async {
     try {
-      final formData = FormData.fromMap({
+      // Debug: Print the values being sent
+      print('Sending expense data:');
+      print('Amount: $amount');
+      print('Description: $description');
+      print('Purpose: $purpose');
+      print('Spent By: $spentBy');
+
+      Map<String, dynamic> formDataMap = {
         'amount': amount.toString(),
         'description': description,
         'purpose': purpose,
         'spentBy': spentBy,
-        if (receipt != null)
-          'receipt': await MultipartFile.fromFile(receipt.path),
-      });
+      };
+
+      // Add receipt file if provided
+      if (receipt != null) {
+        // Get file extension and determine content type
+        final extension = receipt.path.toLowerCase().split('.').last;
+        MediaType contentType = MediaType('image', 'jpeg'); // default
+
+        switch (extension) {
+          case 'png':
+            contentType = MediaType('image', 'png');
+            break;
+          case 'jpg':
+          case 'jpeg':
+            contentType = MediaType('image', 'jpeg');
+            break;
+          case 'gif':
+            contentType = MediaType('image', 'gif');
+            break;
+          case 'bmp':
+            contentType = MediaType('image', 'bmp');
+            break;
+          case 'webp':
+            contentType = MediaType('image', 'webp');
+            break;
+          case 'pdf':
+            contentType = MediaType('application', 'pdf');
+            break;
+        }
+
+        formDataMap['receipt'] = await MultipartFile.fromFile(
+          receipt.path,
+          contentType: contentType,
+          filename: 'receipt.$extension',
+        );
+      }
+
+      final formData = FormData.fromMap(formDataMap);
+
+      // Debug: Print form data fields
+      print('Form data fields:');
+      for (var field in formData.fields) {
+        print('${field.key}: ${field.value}');
+      }
 
       final res = await ApiClient.dio.post(
         '/expenses',
@@ -48,9 +95,42 @@ class ExpenseApi {
         ),
       );
 
+      // Debug: Print response
+      print('Response: ${res.data}');
+
       return res.data;
     } on DioException catch (e) {
-      throw Exception(e.response?.data['error'] ?? 'Add expense failed');
+      // Enhanced error handling
+      String errorMessage = 'Add expense failed';
+
+      if (e.response != null) {
+        final responseData = e.response!.data;
+        print('Error response: $responseData'); // Debug print
+
+        if (responseData is Map<String, dynamic>) {
+          errorMessage =
+              responseData['message'] ??
+              responseData['error'] ??
+              'Server returned ${e.response!.statusCode} error';
+        } else if (responseData is String) {
+          errorMessage = responseData;
+        } else {
+          errorMessage = 'Server returned ${e.response!.statusCode} error';
+        }
+      } else if (e.type == DioExceptionType.connectionTimeout) {
+        errorMessage =
+            'Connection timeout. Please check your internet connection.';
+      } else if (e.type == DioExceptionType.receiveTimeout) {
+        errorMessage = 'Server is taking too long to respond.';
+      } else if (e.type == DioExceptionType.connectionError) {
+        errorMessage =
+            'Unable to connect to server. Please check your internet connection.';
+      }
+
+      throw Exception(errorMessage);
+    } catch (e) {
+      print('Unexpected error: $e'); // Debug print
+      throw Exception('Unexpected error: ${e.toString()}');
     }
   }
 
@@ -65,14 +145,63 @@ class ExpenseApi {
     File? receipt,
   }) async {
     try {
-      final formData = FormData.fromMap({
+      // Debug: Print the values being sent
+      print('Updating expense data:');
+      print('ID: $id');
+      print('Amount: $amount');
+      print('Description: $description');
+      print('Purpose: $purpose');
+      print('Spent By: $spentBy');
+
+      Map<String, dynamic> formDataMap = {
         'amount': amount.toString(),
         'description': description,
         'purpose': purpose,
         'spentBy': spentBy,
-        if (receipt != null)
-          'receipt': await MultipartFile.fromFile(receipt.path),
-      });
+      };
+
+      // Add receipt file if provided
+      if (receipt != null) {
+        // Get file extension and determine content type
+        final extension = receipt.path.toLowerCase().split('.').last;
+        MediaType contentType = MediaType('image', 'jpeg'); // default
+
+        switch (extension) {
+          case 'png':
+            contentType = MediaType('image', 'png');
+            break;
+          case 'jpg':
+          case 'jpeg':
+            contentType = MediaType('image', 'jpeg');
+            break;
+          case 'gif':
+            contentType = MediaType('image', 'gif');
+            break;
+          case 'bmp':
+            contentType = MediaType('image', 'bmp');
+            break;
+          case 'webp':
+            contentType = MediaType('image', 'webp');
+            break;
+          case 'pdf':
+            contentType = MediaType('application', 'pdf');
+            break;
+        }
+
+        formDataMap['receipt'] = await MultipartFile.fromFile(
+          receipt.path,
+          contentType: contentType,
+          filename: 'receipt.$extension',
+        );
+      }
+
+      final formData = FormData.fromMap(formDataMap);
+
+      // Debug: Print form data fields
+      print('Form data fields:');
+      for (var field in formData.fields) {
+        print('${field.key}: ${field.value}');
+      }
 
       final res = await ApiClient.dio.put(
         '/expenses/$id',
@@ -85,9 +214,42 @@ class ExpenseApi {
         ),
       );
 
+      // Debug: Print response
+      print('Response: ${res.data}');
+
       return res.data;
     } on DioException catch (e) {
-      throw Exception(e.response?.data['error'] ?? 'Update expense failed');
+      // Enhanced error handling
+      String errorMessage = 'Update expense failed';
+
+      if (e.response != null) {
+        final responseData = e.response!.data;
+        print('Error response: $responseData'); // Debug print
+
+        if (responseData is Map<String, dynamic>) {
+          errorMessage =
+              responseData['message'] ??
+              responseData['error'] ??
+              'Server returned ${e.response!.statusCode} error';
+        } else if (responseData is String) {
+          errorMessage = responseData;
+        } else {
+          errorMessage = 'Server returned ${e.response!.statusCode} error';
+        }
+      } else if (e.type == DioExceptionType.connectionTimeout) {
+        errorMessage =
+            'Connection timeout. Please check your internet connection.';
+      } else if (e.type == DioExceptionType.receiveTimeout) {
+        errorMessage = 'Server is taking too long to respond.';
+      } else if (e.type == DioExceptionType.connectionError) {
+        errorMessage =
+            'Unable to connect to server. Please check your internet connection.';
+      }
+
+      throw Exception(errorMessage);
+    } catch (e) {
+      print('Unexpected error: $e'); // Debug print
+      throw Exception('Unexpected error: ${e.toString()}');
     }
   }
 

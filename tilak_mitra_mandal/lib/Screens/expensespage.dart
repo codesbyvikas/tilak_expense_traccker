@@ -57,20 +57,24 @@ class _ExpensesPageState extends State<ExpensesPage> {
       final expenses = await ExpenseApi.getExpenses(widget.token);
 
       setState(() {
-        _expenses = expenses
-            .map<Map<String, dynamic>>(
-              (dynamic item) => {
-                'id': (item['_id'] ?? item['id'])?.toString() ?? '',
-                'amount': _parseToDouble(item['amount']),
-                // Map the correct API fields
-                'what': (item['purpose'] ?? item['description'] ?? '').toString(),
-                'by': (item['spentBy'] ?? item['collectedBy'] ?? '').toString(),
-                'description': (item['description'] ?? '').toString(),
-                'image': item['receiptUrl']?.toString(),
-                'date': _parseDate(item['date']),
-              },
-            )
-            .toList();
+        _expenses =
+            expenses
+                .map<Map<String, dynamic>>(
+                  (dynamic item) => {
+                    'id': (item['_id'] ?? item['id'])?.toString() ?? '',
+                    'amount': _parseToDouble(item['amount']),
+                    'what':
+                        (item['purpose'] ?? item['description'] ?? '')
+                            .toString(),
+                    'by':
+                        (item['spentBy'] ?? item['collectedBy'] ?? '')
+                            .toString(),
+                    'description': (item['description'] ?? '').toString(),
+                    'image': item['receiptUrl']?.toString(),
+                    'date': _parseDate(item['date']),
+                  },
+                )
+                .toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -107,20 +111,41 @@ class _ExpensesPageState extends State<ExpensesPage> {
   }
 
   Future<void> _addExpenseEntry() async {
+    await _showExpenseDialog();
+  }
+
+  Future<void> _editExpense(Map<String, dynamic> expense) async {
+    await _showExpenseDialog(expense: expense);
+  }
+
+  Future<void> _showExpenseDialog({Map<String, dynamic>? expense}) async {
     if (!_isAdmin) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Only administrators can add expenses'),
-          backgroundColor: Color(0xFFD32F2F),
+        SnackBar(
+          content: Text(
+            expense == null
+                ? 'Only administrators can add expenses'
+                : 'Only administrators can edit expenses',
+          ),
+          backgroundColor: const Color(0xFFD32F2F),
         ),
       );
       return;
     }
 
-    final TextEditingController amountController = TextEditingController();
-    final TextEditingController purposeController = TextEditingController();
-    final TextEditingController byController = TextEditingController();
-    final TextEditingController descriptionController = TextEditingController();
+    final bool isEditing = expense != null;
+    final TextEditingController amountController = TextEditingController(
+      text: isEditing ? expense['amount'].toString() : '',
+    );
+    final TextEditingController purposeController = TextEditingController(
+      text: isEditing ? expense['what'] : '',
+    );
+    final TextEditingController byController = TextEditingController(
+      text: isEditing ? expense['by'] : '',
+    );
+    final TextEditingController descriptionController = TextEditingController(
+      text: isEditing ? expense['description'] : '',
+    );
     File? image;
 
     await showDialog(
@@ -140,16 +165,19 @@ class _ExpensesPageState extends State<ExpensesPage> {
                       color: const Color(0xFFFF5722).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(
-                      Icons.remove_circle_outline,
-                      color: Color(0xFFFF5722),
+                    child: Icon(
+                      isEditing ? Icons.edit : Icons.remove_circle_outline,
+                      color: const Color(0xFFFF5722),
                       size: 24,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    "Add Expense",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  Text(
+                    isEditing ? "Edit Expense" : "Add Expense",
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -242,7 +270,8 @@ class _ExpensesPageState extends State<ExpensesPage> {
                                 imageQuality: 80,
                               );
                               if (picked != null) {
-                                final extension = picked.path.toLowerCase().split('.').last;
+                                final extension =
+                                    picked.path.toLowerCase().split('.').last;
                                 final allowedExtensions = [
                                   'jpg',
                                   'jpeg',
@@ -282,21 +311,30 @@ class _ExpensesPageState extends State<ExpensesPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                image != null ? Icons.check_circle : Icons.camera_alt,
-                                color: image != null
-                                    ? const Color(0xFFFF5722)
-                                    : Colors.grey[600],
+                                image != null
+                                    ? Icons.check_circle
+                                    : Icons.camera_alt,
+                                color:
+                                    image != null
+                                        ? const Color(0xFFFF5722)
+                                        : Colors.grey[600],
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                image != null ? "Image Selected" : "Pick Receipt Image",
+                                image != null
+                                    ? "New Image Selected"
+                                    : isEditing && expense['image'] != null
+                                    ? "Change Receipt Image"
+                                    : "Pick Receipt Image",
                                 style: TextStyle(
-                                  color: image != null
-                                      ? const Color(0xFFFF5722)
-                                      : Colors.grey[600],
-                                  fontWeight: image != null
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
+                                  color:
+                                      image != null
+                                          ? const Color(0xFFFF5722)
+                                          : Colors.grey[600],
+                                  fontWeight:
+                                      image != null
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
                                 ),
                               ),
                             ],
@@ -304,6 +342,37 @@ class _ExpensesPageState extends State<ExpensesPage> {
                         ),
                       ),
                     ),
+                    if (isEditing &&
+                        expense['image'] != null &&
+                        image == null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.image,
+                              color: Colors.grey[600],
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "Current receipt will be kept",
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -323,7 +392,9 @@ class _ExpensesPageState extends State<ExpensesPage> {
                     ),
                   ),
                   onPressed: () async {
-                    final amount = double.tryParse(amountController.text.trim());
+                    final amount = double.tryParse(
+                      amountController.text.trim(),
+                    );
                     final purpose = purposeController.text.trim();
                     final spentBy = byController.text.trim();
 
@@ -338,24 +409,44 @@ class _ExpensesPageState extends State<ExpensesPage> {
                       });
 
                       try {
-                        await ExpenseApi.addExpense(
-                          token: widget.token,
-                          amount: amount,
-                          purpose: purpose,
-                          spentBy: spentBy,
-                          description: descriptionController.text.trim().isNotEmpty
-                              ? descriptionController.text.trim()
-                              : null,
-                          receipt: image,
-                        );
+                        if (isEditing) {
+                          await ExpenseApi.updateExpense(
+                            id: expense['id'],
+                            token: widget.token,
+                            amount: amount,
+                            purpose: purpose,
+                            spentBy: spentBy,
+                            description:
+                                descriptionController.text.trim().isNotEmpty
+                                    ? descriptionController.text.trim()
+                                    : '',
+                            receipt: image,
+                          );
+                        } else {
+                          await ExpenseApi.addExpense(
+                            token: widget.token,
+                            amount: amount,
+                            purpose: purpose,
+                            spentBy: spentBy,
+                            description:
+                                descriptionController.text.trim().isNotEmpty
+                                    ? descriptionController.text.trim()
+                                    : '',
+                            receipt: image,
+                          );
+                        }
 
                         await _loadExpenses();
 
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Expense added successfully!'),
-                              backgroundColor: Color(0xFFFF5722),
+                            SnackBar(
+                              content: Text(
+                                isEditing
+                                    ? 'Expense updated successfully!'
+                                    : 'Expense added successfully!',
+                              ),
+                              backgroundColor: const Color(0xFFFF5722),
                             ),
                           );
                         }
@@ -384,9 +475,9 @@ class _ExpensesPageState extends State<ExpensesPage> {
                       );
                     }
                   },
-                  child: const Text(
-                    "Save",
-                    style: TextStyle(color: Colors.white),
+                  child: Text(
+                    isEditing ? "Update" : "Save",
+                    style: const TextStyle(color: Colors.white),
                   ),
                 ),
               ],
@@ -581,6 +672,18 @@ class _ExpensesPageState extends State<ExpensesPage> {
             ),
           ),
           actions: [
+            if (_isAdmin) ...[
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _editExpense(item);
+                },
+                child: const Text(
+                  'Edit',
+                  style: TextStyle(color: Color(0xFFFF5722)),
+                ),
+              ),
+            ],
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text(
@@ -723,79 +826,85 @@ class _ExpensesPageState extends State<ExpensesPage> {
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.all(20),
-                  sliver: _isLoading
-                      ? SliverFillRemaining(
-                          child: Center(
-                            child: Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFFFF5722).withOpacity(0.1),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 50,
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFF5722).withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(25),
+                  sliver:
+                      _isLoading
+                          ? SliverFillRemaining(
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFFFF5722,
+                                      ).withOpacity(0.1),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
                                     ),
-                                    child: const Center(
-                                      child: CircularProgressIndicator(
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                          Color(0xFFFF5722),
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 50,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFFFF5722,
+                                        ).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(25),
+                                      ),
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Color(0xFFFF5722),
+                                              ),
+                                          strokeWidth: 3,
                                         ),
-                                        strokeWidth: 3,
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'Loading Expenses...',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF2E2E2E),
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                      'Loading Expenses...',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF2E2E2E),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Please wait while we fetch your data',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[600],
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Please wait while we fetch your data',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        )
-                      : _error != null
+                          )
+                          : _error != null
                           ? SliverFillRemaining(child: _buildErrorState())
                           : _expenses.isEmpty
-                              ? SliverFillRemaining(child: _buildEmptyState())
-                              : SliverList(
-                                  delegate: SliverChildBuilderDelegate((
-                                    context,
-                                    index,
-                                  ) {
-                                    final item = _expenses[index];
-                                    return Padding(
-                                      padding: const EdgeInsets.only(bottom: 16),
-                                      child: _buildExpenseCard(item),
-                                    );
-                                  }, childCount: _expenses.length),
-                                ),
+                          ? SliverFillRemaining(child: _buildEmptyState())
+                          : SliverList(
+                            delegate: SliverChildBuilderDelegate((
+                              context,
+                              index,
+                            ) {
+                              final item = _expenses[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: _buildExpenseCard(item),
+                              );
+                            }, childCount: _expenses.length),
+                          ),
                 ),
               ],
             ),
@@ -820,58 +929,64 @@ class _ExpensesPageState extends State<ExpensesPage> {
       ),
       child: Dismissible(
         key: Key(item['id'] as String),
-        direction: _isAdmin ? DismissDirection.endToStart : DismissDirection.none,
-        background: _isAdmin
-            ? Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD32F2F),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 16),
-                child: const Icon(
-                  Icons.delete,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              )
-            : null,
-        confirmDismiss: _isAdmin
-            ? (direction) async {
-                return await showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Delete Expense'),
-                    content: const Text(
-                      'Are you sure you want to delete this expense?',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Cancel'),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: const Text(
-                          'Delete',
-                          style: TextStyle(color: Color(0xFFD32F2F)),
-                        ),
-                      ),
-                    ],
+        direction:
+            _isAdmin ? DismissDirection.endToStart : DismissDirection.none,
+        background:
+            _isAdmin
+                ? Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD32F2F),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                );
-              }
-            : null,
-        onDismissed: _isAdmin
-            ? (direction) {
-                _deleteExpense(item['id'] as String);
-              }
-            : null,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 16),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                )
+                : null,
+        confirmDismiss:
+            _isAdmin
+                ? (direction) async {
+                  return await showDialog(
+                    context: context,
+                    builder:
+                        (context) => AlertDialog(
+                          title: const Text('Delete Expense'),
+                          content: const Text(
+                            'Are you sure you want to delete this expense?',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text(
+                                'Delete',
+                                style: TextStyle(color: Color(0xFFD32F2F)),
+                              ),
+                            ),
+                          ],
+                        ),
+                  );
+                }
+                : null,
+        onDismissed:
+            _isAdmin
+                ? (direction) {
+                  _deleteExpense(item['id'] as String);
+                }
+                : null,
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
             onTap: () => _showExpenseDetails(item),
+            onLongPress: _isAdmin ? () => _editExpense(item) : null,
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -920,7 +1035,8 @@ class _ExpensesPageState extends State<ExpensesPage> {
                       ),
                       if (item['image'] != null)
                         GestureDetector(
-                          onTap: () => _showImageDialog(item['image'] as String),
+                          onTap:
+                              () => _showImageDialog(item['image'] as String),
                           child: Container(
                             width: 50,
                             height: 50,
@@ -933,7 +1049,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(6),
-                                                            child: Image.network(
+                              child: Image.network(
                                 item['image'] as String,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
@@ -966,7 +1082,10 @@ class _ExpensesPageState extends State<ExpensesPage> {
                           (item['by'] as String).isNotEmpty
                               ? item['by'] as String
                               : 'Anonymous',
-                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -979,8 +1098,13 @@ class _ExpensesPageState extends State<ExpensesPage> {
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
-                          DateFormat('MMM dd, yyyy').format(item['date'] as DateTime),
-                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                          DateFormat(
+                            'MMM dd, yyyy',
+                          ).format(item['date'] as DateTime),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
