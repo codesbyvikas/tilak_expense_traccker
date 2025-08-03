@@ -320,84 +320,15 @@ class _CollectionsPageState extends State<CollectionsPage> {
                         amount > 0 &&
                         collectedBy.isNotEmpty &&
                         collectedFrom.isNotEmpty) {
-                      // Store the context before any async operations
-                      final scaffoldMessenger = ScaffoldMessenger.of(context);
-                      final currentContext = context;
-
                       // Close the dialog first
                       Navigator.of(context).pop();
 
-                      try {
-                        // Show loading
-                        showDialog(
-                          context: currentContext,
-                          barrierDismissible: false,
-                          builder:
-                              (BuildContext dialogContext) => Dialog(
-                                backgroundColor: Colors.transparent,
-                                elevation: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(
-                                          0xFFFF5722,
-                                        ).withOpacity(0.1),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        width: 50,
-                                        height: 50,
-                                        decoration: BoxDecoration(
-                                          color: const Color(
-                                            0xFFFF5722,
-                                          ).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            25,
-                                          ),
-                                        ),
-                                        child: const Center(
-                                          child: CircularProgressIndicator(
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                                  Color(0xFFFF5722),
-                                                ),
-                                            strokeWidth: 3,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      const Text(
-                                        'Adding Collection...',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w500,
-                                          color: Color(0xFF2E2E2E),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Please wait while we save your data',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                        );
+                      // Use a simple boolean flag instead of dialog for loading
+                      setState(() {
+                        _isLoading = true;
+                      });
 
+                      try {
                         // Call API
                         await CollectionApi.addCollection(
                           token: widget.token,
@@ -411,30 +342,32 @@ class _CollectionsPageState extends State<CollectionsPage> {
                           receipt: image,
                         );
 
-                        // Hide loading dialog by popping it
-                        Navigator.of(currentContext).pop();
-
                         // Refresh data
                         await _loadCollections();
 
                         // Show success message
-                        scaffoldMessenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Collection added successfully!'),
-                            backgroundColor: Color(0xFFFF5722),
-                          ),
-                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Collection added successfully!'),
+                              backgroundColor: Color(0xFFFF5722),
+                            ),
+                          );
+                        }
                       } catch (e) {
-                        // Hide loading dialog
-                        Navigator.of(currentContext).pop();
+                        setState(() {
+                          _isLoading = false;
+                        });
 
                         // Show error message
-                        scaffoldMessenger.showSnackBar(
-                          SnackBar(
-                            content: Text('Error: ${e.toString()}'),
-                            backgroundColor: const Color(0xFFD32F2F),
-                          ),
-                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: ${e.toString()}'),
+                              backgroundColor: const Color(0xFFD32F2F),
+                            ),
+                          );
+                        }
                       }
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -525,67 +458,6 @@ class _CollectionsPageState extends State<CollectionsPage> {
     if (shouldDelete == true) {
       await _deleteCollection(collectionId);
     }
-  }
-
-  void _showLoadingDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (context) => Dialog(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF5722).withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF5722).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Color(0xFFFF5722),
-                        ),
-                        strokeWidth: 3,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Adding Collection...',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF2E2E2E),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Please wait while we save your data',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            ),
-          ),
-    );
   }
 
   Future<void> _deleteCollection(String id) async {
@@ -950,13 +822,27 @@ class _CollectionsPageState extends State<CollectionsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-                      Text(
-                        "₹${item['amount'].toStringAsFixed(2)}",
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2E2E2E),
-                        ),
+                      // Amount and Date Row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "₹${item['amount'].toStringAsFixed(2)}",
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2E2E2E),
+                            ),
+                          ),
+                          Text(
+                            DateFormat('MMM d, yyyy').format(item['date']),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       // From field
@@ -1013,51 +899,7 @@ class _CollectionsPageState extends State<CollectionsPage> {
                             ],
                           ),
                         ),
-                      // Description field (if exists)
-                      if (item['description']?.isNotEmpty == true)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.description_outlined,
-                                size: 14,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  item['description'],
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 2,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      // Date
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 14,
-                            color: Colors.grey[600],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            DateFormat('MMM d, yyyy').format(item['date']),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
+                      // Removed description from display as requested
                     ],
                   ),
                 ),

@@ -13,31 +13,29 @@ exports.getExpenses = async (req, res) => {
 
 exports.addExpense = async (req, res) => {
   try {
-    const { description, spentBy, amount } = req.body;
+    const { amount, description, purpose, spentBy } = req.body;
     const file = req.file;
 
-    if (!description || !spentBy) {
-      return res.status(400).json({ error: 'Description and spentBy are required fields' });
+    if (!amount || !description || !purpose || !spentBy) {
+      return res.status(400).json({
+        error: 'Amount, description, purpose, and spentBy are required',
+        received: { amount, description, purpose, spentBy },
+      });
     }
 
-    const parsedAmount = amount ? parseFloat(amount) : 0;
-    if (amount && (isNaN(parsedAmount) || parsedAmount <= 0)) {
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return res.status(400).json({ error: 'Amount must be a positive number' });
     }
 
     const receiptUrl = file?.path || null;
-    if (receiptUrl) {
-      console.log('✅ Receipt uploaded:', receiptUrl);
-    } else {
-      console.log('⚠️ No receipt uploaded');
-    }
 
     const newExpense = new Expense({
-      description,
-      spentBy,
-      amount: parsedAmount || undefined,
+      amount: parsedAmount,
+      description: description.trim(),
+      purpose: purpose.trim(),
+      spentBy: spentBy.trim(),
       receiptUrl,
-      date: new Date() // fallback if not auto-set
     });
 
     const saved = await newExpense.save();
@@ -61,9 +59,9 @@ exports.deleteExpense = async (req, res) => {
       try {
         const publicId = expense.receiptUrl.split('/').slice(-2).join('/').split('.')[0];
         await cloudinary.uploader.destroy(publicId);
-        console.log('✅ Deleted from Cloudinary:', publicId);
+        console.log('✅ Cloudinary file deleted:', publicId);
       } catch (err) {
-        console.warn('⚠️ Failed to delete from Cloudinary:', err.message);
+        console.warn('⚠️ Cloudinary delete error:', err.message);
       }
     }
 
@@ -72,5 +70,47 @@ exports.deleteExpense = async (req, res) => {
   } catch (err) {
     console.error('❌ Failed to delete expense:', err);
     res.status(500).json({ error: 'Failed to delete expense' });
+  }
+};
+
+exports.updateExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount, description, purpose, spentBy } = req.body;
+    const file = req.file;
+
+    const expense = await Expense.findById(id);
+    if (!expense) {
+      return res.status(404).json({ error: 'Expense not found' });
+    }
+
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return res.status(400).json({ error: 'Amount must be a positive number' });
+    }
+
+    expense.amount = parsedAmount;
+    expense.description = description.trim();
+    expense.purpose = purpose.trim();
+    expense.spentBy = spentBy.trim();
+
+    if (file) {
+      if (expense.receiptUrl) {
+        try {
+          const parts = expense.receiptUrl.split('/');
+          const folderAndPublicId = parts.slice(-2).join('/').split('.')[0];
+          await cloudinary.uploader.destroy(folderAndPublicId);
+        } catch (err) {
+          console.warn('⚠️ Cloudinary delete error:', err.message);
+        }
+      }
+      expense.receiptUrl = file.path;
+    }
+
+    const updated = await expense.save();
+    res.json(updated);
+  } catch (err) {
+    console.error('❌ Failed to update expense:', err);
+    res.status(500).json({ error: 'Failed to update expense' });
   }
 };

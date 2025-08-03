@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:tilak_mitra_mandal/api/api_client.dart';
 
 class CollectionApi {
+  // Fetch all collections
   static Future<List<dynamic>> getCollections(String token) async {
     try {
       final res = await ApiClient.dio.get(
@@ -18,16 +19,19 @@ class CollectionApi {
     }
   }
 
+  // Add new collection
   static Future<Map<String, dynamic>> addCollection({
     required String token,
     required double amount,
     required String collectedBy,
+    required String collectedFrom,
     File? receipt,
   }) async {
     try {
       final formData = FormData.fromMap({
         'amount': amount.toString(),
         'collectedBy': collectedBy,
+        'collectedFrom': collectedFrom,
         if (receipt != null)
           'receipt': await MultipartFile.fromFile(receipt.path),
       });
@@ -47,6 +51,7 @@ class CollectionApi {
     }
   }
 
+  // Delete collection by ID
   static Future<void> deleteCollection(String id, String token) async {
     try {
       await ApiClient.dio.delete(
