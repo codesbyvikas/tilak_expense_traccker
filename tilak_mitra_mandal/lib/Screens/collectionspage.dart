@@ -65,9 +65,11 @@ class _CollectionsPageState extends State<CollectionsPage> {
                     'amount': (item['amount'] as num).toDouble(),
                     'from': item['collectedFrom'] ?? '',
                     'by': item['collectedBy'] ?? '',
-                    'image': item['receipt'] != null ? item['receipt'] : null,
+                    'description': item['description'] ?? '',
+                    'image':
+                        item['receiptUrl'] != null ? item['receiptUrl'] : null,
                     'date': DateTime.parse(
-                      item['createdAt'] ?? DateTime.now().toIso8601String(),
+                      item['date'] ?? DateTime.now().toIso8601String(),
                     ),
                   },
                 )
@@ -95,6 +97,7 @@ class _CollectionsPageState extends State<CollectionsPage> {
 
     final TextEditingController amountController = TextEditingController();
     final TextEditingController byController = TextEditingController();
+    final TextEditingController fromController = TextEditingController();
     final TextEditingController descriptionController = TextEditingController();
     File? image;
 
@@ -167,6 +170,22 @@ class _CollectionsPageState extends State<CollectionsPage> {
                     ),
                     const SizedBox(height: 16),
                     TextField(
+                      controller: fromController,
+                      decoration: InputDecoration(
+                        labelText: "Collected From",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFFF5722),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
                       controller: descriptionController,
                       maxLines: 3,
                       decoration: InputDecoration(
@@ -195,13 +214,48 @@ class _CollectionsPageState extends State<CollectionsPage> {
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
                           onTap: () async {
-                            final picked = await picker.pickImage(
-                              source: ImageSource.gallery,
-                            );
-                            if (picked != null) {
-                              setDialogState(() {
-                                image = File(picked.path);
-                              });
+                            try {
+                              final picked = await picker.pickImage(
+                                source: ImageSource.gallery,
+                                imageQuality: 80, // Compress image
+                              );
+                              if (picked != null) {
+                                // Validate file extension
+                                final extension =
+                                    picked.path.toLowerCase().split('.').last;
+                                final allowedExtensions = [
+                                  'jpg',
+                                  'jpeg',
+                                  'png',
+                                  'gif',
+                                  'bmp',
+                                  'webp',
+                                ];
+
+                                if (allowedExtensions.contains(extension)) {
+                                  setDialogState(() {
+                                    image = File(picked.path);
+                                  });
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Please select a valid image file (JPG, PNG, etc.)',
+                                      ),
+                                      backgroundColor: Color(0xFFD32F2F),
+                                    ),
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Error selecting image: ${e.toString()}',
+                                  ),
+                                  backgroundColor: const Color(0xFFD32F2F),
+                                ),
+                              );
                             }
                           },
                           child: Row(
@@ -259,34 +313,123 @@ class _CollectionsPageState extends State<CollectionsPage> {
                     final amount = double.tryParse(
                       amountController.text.trim(),
                     );
-                    if (amount != null && amount > 0) {
+                    final collectedBy = byController.text.trim();
+                    final collectedFrom = fromController.text.trim();
+
+                    if (amount != null &&
+                        amount > 0 &&
+                        collectedBy.isNotEmpty &&
+                        collectedFrom.isNotEmpty) {
+                      // Store the context before any async operations
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
+                      final currentContext = context;
+
+                      // Close the dialog first
+                      Navigator.of(context).pop();
+
                       try {
                         // Show loading
-                        Navigator.pop(context);
-                        _showLoadingDialog();
+                        showDialog(
+                          context: currentContext,
+                          barrierDismissible: false,
+                          builder:
+                              (BuildContext dialogContext) => Dialog(
+                                backgroundColor: Colors.transparent,
+                                elevation: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFFFF5722,
+                                        ).withOpacity(0.1),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 50,
+                                        height: 50,
+                                        decoration: BoxDecoration(
+                                          color: const Color(
+                                            0xFFFF5722,
+                                          ).withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            25,
+                                          ),
+                                        ),
+                                        child: const Center(
+                                          child: CircularProgressIndicator(
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Color(0xFFFF5722),
+                                                ),
+                                            strokeWidth: 3,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      const Text(
+                                        'Adding Collection...',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                          color: Color(0xFF2E2E2E),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Please wait while we save your data',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                        );
 
                         // Call API
                         await CollectionApi.addCollection(
                           token: widget.token,
                           amount: amount,
-                          collectedBy: byController.text.trim(),
+                          collectedBy: collectedBy,
+                          collectedFrom: collectedFrom,
+                          description:
+                              descriptionController.text.trim().isNotEmpty
+                                  ? descriptionController.text.trim()
+                                  : null,
                           receipt: image,
                         );
 
-                        // Hide loading and refresh data
-                        Navigator.pop(context);
+                        // Hide loading dialog by popping it
+                        Navigator.of(currentContext).pop();
+
+                        // Refresh data
                         await _loadCollections();
 
                         // Show success message
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        scaffoldMessenger.showSnackBar(
                           const SnackBar(
                             content: Text('Collection added successfully!'),
                             backgroundColor: Color(0xFFFF5722),
                           ),
                         );
                       } catch (e) {
-                        Navigator.pop(context); // Hide loading
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        // Hide loading dialog
+                        Navigator.of(currentContext).pop();
+
+                        // Show error message
+                        scaffoldMessenger.showSnackBar(
                           SnackBar(
                             content: Text('Error: ${e.toString()}'),
                             backgroundColor: const Color(0xFFD32F2F),
@@ -296,7 +439,9 @@ class _CollectionsPageState extends State<CollectionsPage> {
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Please enter a valid amount'),
+                          content: Text(
+                            'Please fill in all required fields with valid data',
+                          ),
                           backgroundColor: Color(0xFFD32F2F),
                         ),
                       );
@@ -814,6 +959,60 @@ class _CollectionsPageState extends State<CollectionsPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
+                      // From field
+                      if (item['from']?.isNotEmpty == true)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.person_outline,
+                                size: 14,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  "From: ${item['from']}",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      // By field
+                      if (item['by']?.isNotEmpty == true)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.badge_outlined,
+                                size: 14,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  "By: ${item['by']}",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       // Description field (if exists)
                       if (item['description']?.isNotEmpty == true)
                         Padding(
@@ -832,7 +1031,7 @@ class _CollectionsPageState extends State<CollectionsPage> {
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w400,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 2,
@@ -841,56 +1040,20 @@ class _CollectionsPageState extends State<CollectionsPage> {
                             ],
                           ),
                         ),
-                      // By and Date in one row
+                      // Date
                       Row(
                         children: [
-                          Expanded(
-                            flex: 2,
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.person_outline,
-                                  size: 14,
-                                  color: Colors.grey[600],
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    item['by']?.isNotEmpty == true
-                                        ? item['by']
-                                        : 'Anonymous',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey[600],
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          Icon(
+                            Icons.calendar_today,
+                            size: 14,
+                            color: Colors.grey[600],
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            flex: 1,
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.calendar_today,
-                                  size: 14,
-                                  color: Colors.grey[600],
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    DateFormat('MMM d').format(item['date']),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
+                          const SizedBox(width: 4),
+                          Text(
+                            DateFormat('MMM d, yyyy').format(item['date']),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
                             ),
                           ),
                         ],

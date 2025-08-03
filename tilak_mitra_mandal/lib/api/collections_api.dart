@@ -1,6 +1,6 @@
-// lib/api/collection_api.dart
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:tilak_mitra_mandal/api/api_client.dart';
 
 class CollectionApi {
@@ -29,14 +29,53 @@ class CollectionApi {
     File? receipt,
   }) async {
     try {
-      final formData = FormData.fromMap({
+      Map<String, dynamic> formDataMap = {
         'amount': amount.toString(),
         'collectedBy': collectedBy,
         'collectedFrom': collectedFrom,
-        if (description != null) 'description': description,
-        if (receipt != null)
-          'receipt': await MultipartFile.fromFile(receipt.path),
-      });
+      };
+
+      // Add description if provided
+      if (description != null && description.isNotEmpty) {
+        formDataMap['description'] = description;
+      }
+
+      // Add receipt file if provided
+      if (receipt != null) {
+        // Get file extension and determine content type
+        final extension = receipt.path.toLowerCase().split('.').last;
+        MediaType contentType = MediaType('image', 'jpeg'); // default
+        
+        switch (extension) {
+          case 'png':
+            contentType = MediaType('image', 'png');
+            break;
+          case 'jpg':
+          case 'jpeg':
+            contentType = MediaType('image', 'jpeg');
+            break;
+          case 'gif':
+            contentType = MediaType('image', 'gif');
+            break;
+          case 'bmp':
+            contentType = MediaType('image', 'bmp');
+            break;
+          case 'webp':
+            contentType = MediaType('image', 'webp');
+            break;
+          case 'pdf':
+            contentType = MediaType('application', 'pdf');
+            break;
+        }
+
+        formDataMap['receipt'] = await MultipartFile.fromFile(
+          receipt.path,
+          contentType: contentType,
+          filename: 'receipt.$extension',
+        );
+      }
+
+      final formData = FormData.fromMap(formDataMap);
 
       final res = await ApiClient.dio.post(
         '/collections',
@@ -51,7 +90,31 @@ class CollectionApi {
 
       return res.data;
     } on DioException catch (e) {
-      throw Exception(e.response?.data['error'] ?? 'Add collection failed');
+      // Enhanced error handling
+      String errorMessage = 'Add collection failed';
+      
+      if (e.response != null) {
+        final responseData = e.response!.data;
+        if (responseData is Map<String, dynamic>) {
+          errorMessage = responseData['message'] ?? 
+                        responseData['error'] ?? 
+                        'Server returned ${e.response!.statusCode} error';
+        } else if (responseData is String) {
+          errorMessage = responseData;
+        } else {
+          errorMessage = 'Server returned ${e.response!.statusCode} error';
+        }
+      } else if (e.type == DioExceptionType.connectionTimeout) {
+        errorMessage = 'Connection timeout. Please check your internet connection.';
+      } else if (e.type == DioExceptionType.receiveTimeout) {
+        errorMessage = 'Server is taking too long to respond.';
+      } else if (e.type == DioExceptionType.connectionError) {
+        errorMessage = 'Unable to connect to server. Please check your internet connection.';
+      }
+      
+      throw Exception(errorMessage);
+    } catch (e) {
+      throw Exception('Unexpected error: ${e.toString()}');
     }
   }
 
