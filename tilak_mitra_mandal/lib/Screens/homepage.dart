@@ -1,6 +1,8 @@
 // homepage.dart
 import 'package:flutter/material.dart';
 import 'package:tilak_mitra_mandal/Screens/financepage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tilak_mitra_mandal/Screens/loginpage.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -35,6 +37,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // Clear token and user data
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -59,23 +72,23 @@ class _HomeScreenState extends State<HomeScreen> {
           //     ),
           //   ),
           // ),
-          // Positioned(
-          //   bottom: 50,
-          //   left: -30,
-          //   child: Opacity(
-          //     opacity: 0.04,
-          //     child: Container(
-          //       width: 150,
-          //       height: 150,
-          //       decoration: const BoxDecoration(
-          //         image: DecorationImage(
-          //           image: AssetImage('lib/assets/tilak.png'),
-          //           fit: BoxFit.contain,
-          //         ),
-          //       ),
-          //     ),
-          //   ),
-          // ),
+          Positioned(
+            bottom: 50,
+            left: -30,
+            child: Opacity(
+              opacity: 0.04,
+              child: Container(
+                width: 150,
+                height: 150,
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('lib/assets/tilak.png'),
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+          ),
           Positioned(
             top: 300,
             left: 20,
@@ -101,6 +114,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 expandedHeight: 200,
                 floating: false,
                 pinned: true,
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.logout),
+                    color: Colors.white,
+                    onPressed: _logout,
+                    tooltip: 'Logout',
+                  ),
+                ],
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
                     decoration: const BoxDecoration(

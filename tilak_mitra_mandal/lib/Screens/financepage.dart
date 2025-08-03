@@ -1,13 +1,149 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tilak_mitra_mandal/Screens/collectionspage.dart';
 import 'package:tilak_mitra_mandal/Screens/expensespage.dart';
 
-class CollectionDetailPage extends StatelessWidget {
+class CollectionDetailPage extends StatefulWidget {
   final String collectionName;
   const CollectionDetailPage({required this.collectionName});
 
   @override
+  State<CollectionDetailPage> createState() => _CollectionDetailPageState();
+}
+
+class _CollectionDetailPageState extends State<CollectionDetailPage> {
+  String? _token;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadToken();
+  }
+
+  Future<void> _loadToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      setState(() {
+        _token = token;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      // Handle error - maybe show error message or redirect to login
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error loading authentication data'),
+          backgroundColor: Color(0xFFD32F2F),
+        ),
+      );
+    }
+  }
+
+  void _navigateToCollections() {
+    if (_token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Authentication required. Please login again.'),
+          backgroundColor: Color(0xFFD32F2F),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) => CollectionsPage(
+              collectionName: widget.collectionName,
+              token: _token!,
+            ),
+      ),
+    );
+  }
+
+  void _navigateToExpenses() {
+    if (_token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Authentication required. Please login again.'),
+          backgroundColor: Color(0xFFD32F2F),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ExpensesPage(collectionName: widget.collectionName),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFFAFAFA),
+        body: Center(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF5722).withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF5722).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(0xFFFF5722),
+                      ),
+                      strokeWidth: 3,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Loading...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF2E2E2E),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Please wait while we prepare your data',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: Stack(
@@ -36,17 +172,16 @@ class CollectionDetailPage extends StatelessWidget {
                 pinned: true,
                 backgroundColor: const Color(0xFFD32F2F),
                 flexibleSpace: FlexibleSpaceBar(
-                  centerTitle: true, // 👈 This is key
+                  centerTitle: true,
                   titlePadding: const EdgeInsets.only(bottom: 16),
                   title: Text(
-                    collectionName,
+                    widget.collectionName,
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 20,
                     ),
                   ),
-
                   background: Container(
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
@@ -91,15 +226,7 @@ class CollectionDetailPage extends StatelessWidget {
                       'Manage money collected',
                       Icons.add_circle_outline,
                       const Color(0xFF4CAF50),
-                      () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (_) => CollectionsPage(
-                                collectionName: collectionName,
-                              ),
-                        ),
-                      ),
+                      _navigateToCollections,
                     ),
                     const SizedBox(height: 20),
                     _buildActionButton(
@@ -108,14 +235,7 @@ class CollectionDetailPage extends StatelessWidget {
                       'Track money spent',
                       Icons.remove_circle_outline,
                       const Color(0xFFFF5722),
-                      () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (_) =>
-                                  ExpensesPage(collectionName: collectionName),
-                        ),
-                      ),
+                      _navigateToExpenses,
                     ),
                   ]),
                 ),

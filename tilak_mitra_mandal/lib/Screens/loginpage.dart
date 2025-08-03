@@ -1,4 +1,8 @@
+// lib/screens/login_page.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tilak_mitra_mandal/Screens/homepage.dart';
+import '../api/auth_api.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -61,18 +65,65 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         _isLoading = true;
       });
 
-      await Future.delayed(const Duration(seconds: 2));
+      try {
+        // Call the actual API using imported AuthApi
+        final response = await AuthApi.login(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
 
-      setState(() {
-        _isLoading = false;
-      });
+        // Store token in SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('auth_token', response['token']);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login successful!'),
-          backgroundColor: Color(0xFF4CAF50),
-        ),
-      );
+        // Store user data if needed
+        if (response['user'] != null) {
+          await prefs.setString('user_id', response['user']['_id'] ?? '');
+          await prefs.setString('user_email', response['user']['email'] ?? '');
+          await prefs.setString('user_name', response['user']['name'] ?? '');
+          await prefs.setString('user_role', response['user']['role'] ?? '');
+      
+        }
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Login successful!'),
+              backgroundColor: Color(0xFF4CAF50),
+            ),
+          );
+          final role = prefs.getString('user_role') ?? 'No role saved';
+            print('User Role: $role');
+
+        
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => HomeScreen(),
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        // Show error message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString().replaceAll('Exception: ', '')),
+              backgroundColor: const Color(0xFFD32F2F),
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -174,7 +225,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 child: Opacity(
                                   opacity: 0.9,
                                   child: Image.asset(
-                                    'lib/assets/tilak.png', // 👈 Replace with your image
+                                    'lib/assets/tilak.png',
                                     fit: BoxFit.cover,
                                   ),
                                 ),
