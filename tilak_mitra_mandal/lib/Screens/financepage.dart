@@ -80,7 +80,11 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ExpensesPage(collectionName: widget.collectionName),
+        builder:
+            (_) => ExpensesPage(
+              collectionName: widget.collectionName,
+              token: _token!, // Added the missing token parameter
+            ),
       ),
     );
   }

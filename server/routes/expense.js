@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { auth, isAdmin } = require('../middlewares/auth');
 const {
-  getCollections,
-  addCollection,
-  deleteCollection,
-} = require('../controller/collection');
+  getExpenses,
+  addExpense,
+  deleteExpense,
+  updateExpense,
+} = require('../controller/expense');
 
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
@@ -15,7 +16,7 @@ const cloudinary = require('../utils/cloudinary');
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: 'collections',
+    folder: 'expenses',
     allowed_formats: ['jpg', 'jpeg', 'png', 'pdf'],
     resource_type: 'auto',
   },
@@ -38,8 +39,9 @@ const upload = multer({
 });
 
 // Routes
-router.get('/', auth, getCollections);
-router.post('/', auth, isAdmin, upload.single('receipt'), addCollection);
-router.delete('/:id', auth, isAdmin, deleteCollection); // Delete by ID
+router.get('/', auth, getExpenses);
+router.post('/', auth, upload.single('receipt'), addExpense);
+router.put('/:id', auth, upload.single('receipt'), updateExpense);
+router.delete('/:id', auth, deleteExpense);
 
 module.exports = router;
