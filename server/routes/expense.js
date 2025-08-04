@@ -3,7 +3,7 @@ const router = express.Router();
 const { auth, isAdmin } = require('../middlewares/auth');
 const {
   getExpenses,
-  getTotalExpenses, // NEW: Import the new function
+  getTotalExpenses, 
   addExpense,
   deleteExpense,
   updateExpense,

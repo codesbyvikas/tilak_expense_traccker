@@ -7,12 +7,12 @@ const collectionSchema = new mongoose.Schema({
   },
   collectedBy: {
     type: String,
-    required: true,
+    // required: true,
   },
   collectedFrom: {
     type: String,
-    required: true,
-    defaut: "vikas",
+    // required: true,
+    // defaut: "vikas",
   },
   description: String,
   receiptUrl: String,
