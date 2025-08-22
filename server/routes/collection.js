@@ -37,7 +37,7 @@ const upload = multer({
 
 // Routes
 router.get('/', auth, getCollections);
-router.get('/total', auth, getTotalCollections); // NEW: Add this route
+router.get('/total', auth, getTotalCollections); 
 router.post('/', auth, isAdmin, upload.single('receipt'), addCollection);
 router.delete('/:id', auth, isAdmin, deleteCollection);
 

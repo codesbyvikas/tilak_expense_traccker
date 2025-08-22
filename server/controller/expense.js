@@ -42,7 +42,7 @@ exports.addExpense = async (req, res) => {
     const { amount, description, purpose, spentBy } = req.body;
     const file = req.file;
 
-    if (!amount || !description || !purpose || !spentBy) {
+    if (!amount || !purpose || !spentBy) {
       return res.status(400).json({
         error: 'Amount, description, purpose, and spentBy are required',
         received: { amount, description, purpose, spentBy },
